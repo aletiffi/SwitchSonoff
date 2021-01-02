@@ -1,3 +1,34 @@
+/*
+GPIO03 and GPIO02 are pulled high momentarily after boot. 
+Any connected device may "blink" when the Sonoff is powering up.
+
+Sonoff r1
+    GPIO00 - BUTTON
+    GPIO12 - RELAY
+    GPIO13 - LED1
+    GPIO03 - RX PIN
+    GPIO01 - TX PIN
+    GPIO14
+
+Sonoff r2 (ESP8285 SoC with 1MB flash)
+    GPIO00 - BUTTON
+    GPIO12 - RELAY
+    GPIO13 - LED1
+    GPIO03 - RX PIN
+    GPIO01 - TX PIN
+    GPIO02 no pullup, labeled as IO2
+
+Sonoff r3 (ESP8285)
+    GPIO00 - BUTTON
+    GPIO12 - RELAY
+    GPIO13 - LED1
+    GPIO03 - RX PIN
+    GPIO01 - TX PIN
+    GPIO09
+    GPIO10
+    GPIO16  
+*/
+
 #define SONOFF_BUTTON           0
 #define SONOFF_RELAY            12
 #define SONOFF_LED              13
@@ -15,6 +46,13 @@
 //----------------------------------------------------------------------------
 #define NUM_WIFI_SETTINGS       8
 #define MAX_LENGTH_SETTING      16
+//----------------------------------------------------------------------------
+#define ON_PAYLOAD              "ON"
+#define OFF_PAYLOAD             "OFF"
+//----------------------------------------------------------------------------
+#define ProductKey              "2aea9e14-07a7-4d73-8d83-1dc42cee5622"
+#define Version                 "26.0.0.0"
+#define MakeFirmwareInfo(k, v)  "&_FirmwareInfo&k=" k "&v=" v "&FirmwareInfo_&"
 //----------------------------------------------------------------------------
 bool pushButton                 = false;
 bool pushButtonPre              = false;
@@ -37,8 +75,8 @@ struct WifiSetup{
 WifiSetup Hostname           = {"Hostname", ""};
 WifiSetup Ssid               = {"Ssid", ""};
 WifiSetup Password           = {"Password", ""};
-WifiSetup Set_Light_Sub      = {"Set_Light_Sub", ""};
-WifiSetup Set_Light_Pub      = {"Set_Light_Pub", ""};
+WifiSetup MqttSubTopic       = {"MqttSubTopic", ""};
+WifiSetup MqttPubTopic       = {"MqttPubTopic", ""};
 WifiSetup MqttServer         = {"MqttServer", ""};
 WifiSetup MqttUser           = {"MqttUser", ""};
 WifiSetup MqttPassword       = {"MqttPassword", ""};
@@ -47,8 +85,8 @@ WifiSetup* WifiSettings[NUM_WIFI_SETTINGS] = {
   &Hostname, 
   &Ssid, 
   &Password, 
-  &Set_Light_Sub, 
-  &Set_Light_Pub, 
+  &MqttSubTopic, 
+  &MqttPubTopic,
   &MqttServer, 
   &MqttUser, 
   &MqttPassword};
