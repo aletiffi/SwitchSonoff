@@ -1,1 +1,1 @@
-Importa le modifiche effettuate dalla versione 26 del progetto per strisce a led
+Inserisce esempio di configurazione e note gpio

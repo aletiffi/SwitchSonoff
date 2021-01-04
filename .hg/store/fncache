@@ -6,3 +6,5 @@ data/GlobalVar.h.i
 data/Html.h.i
 data/Switch_Sonoff.ino.itead.bin.i
 data/Switch_Sonoff.ino.itead.bin.d
+data/GPIO_note.txt.i
+data/ConfigurationExample.yaml.i

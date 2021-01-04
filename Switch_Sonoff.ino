@@ -11,7 +11,6 @@
 #include "GlobalVar.h"
 #include "HomePage.h"
 
-
 WiFiClient espClient;
 PubSubClient client (espClient);
 ESP8266WebServer server(80);
@@ -21,7 +20,7 @@ ReadInput Switch(SONOFF_SWITCH);
 DigiOut Led(SONOFF_LED, OFF_LED);
 DigiOut Rele(SONOFF_RELAY, OFF_RELAY);
 StoreStrings mem(EEPROM_SIZE);
-DynamicJsonDocument message(JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(4) + 60);
+DynamicJsonDocument message(JSON_MSG_LENGTH);
 
 void setup() {
   Serial.begin(115200);
@@ -40,33 +39,39 @@ void setup() {
   Connection_Manager();
 }
 
-
 void loop() {
   if (deviceConnected) {
     if (client.connected()) {
       client.loop();
     } else {
-      client.connect(Hostname.Val.c_str(), MqttUser.Val.c_str(), MqttPassword.Val.c_str());
-      client.subscribe(MqttSubTopic.Val.c_str());
-      Serial.println("Mqtt client reconnected");
+      if (millis() - lastMqttCheckConn > MQTT_CONNECTION) {
+        Serial.println("Mqtt client not connected");
+        lastMqttCheckConn = millis();
+        // Attempt to reconnect
+        if (client.connect(Hostname.Val.c_str(), MqttUser.Val.c_str(), MqttPassword.Val.c_str())) {
+          lastMqttCheckConn = 0;
+          client.subscribe(MqttSubTopic.Val.c_str());
+          Serial.println("Mqtt client reconnected");
+        }
+      }
     }
   }
   server.handleClient();
 
-  // Controllo connessione
+  // Controllo connessione ed aggiornamenti ota
   if (millis() - lastTimeCheckConn > TIMER_CONNECTION) {
     // Blink di check connessione
     Serial.print("Connection check... ");
     Led.Off();
     delay(PLACING_TIME);
     lastTimeCheckConn = millis();
-    
-    if ((WiFi.status() != WL_CONNECTED) || !client.connected()) {
+
+    if (WiFi.status() != WL_CONNECTED) {
       Connection_Manager();
     } else {
       Serial.println("OK");
+      OtaUpdate();
       // Accendo led di conferma connessione alla rete
-      delay(PLACING_TIME);
       Led.On();
     }
   }
@@ -168,24 +173,29 @@ void Restart() {
 
 void Switch_On() {
   Rele.On();
-  
+
   if (deviceConnected) {
-    String msg_out;
-    message["state"] = ON_PAYLOAD;
-    serializeJson(message, msg_out);
-    client.publish(MqttPubTopic.Val.c_str(), msg_out.c_str());
+    JsonObject msg = message.to<JsonObject>();    
+    char msg_out[JSON_MSG_LENGTH];
+    msg["state"] = ON_PAYLOAD;
+    serializeJson(msg, msg_out);
+    client.publish(MqttPubTopic.Val.c_str(), msg_out);
+    Serial.print("Message published: ");
+    Serial.println(msg_out);
   }
   Serial.println("Switched ON");
 }
 
 void Switch_Off() {
   Rele.Off();
-  
-  if (deviceConnected) {
-    String msg_out;
-    message["state"] = OFF_PAYLOAD;
-    serializeJson(message, msg_out);
-    client.publish(MqttPubTopic.Val.c_str(), msg_out.c_str());
+
+  if (deviceConnected) {JsonObject msg = message.to<JsonObject>();    
+    char msg_out[JSON_MSG_LENGTH];
+    msg["state"] = OFF_PAYLOAD;
+    serializeJson(msg, msg_out);
+    client.publish(MqttPubTopic.Val.c_str(), msg_out);
+    Serial.print("Message published: ");
+    Serial.println(msg_out);
   }
   Serial.println("Switched OFF");
 }
@@ -227,7 +237,7 @@ void Callback(char *topic, byte *payload, unsigned int length) {
         Serial.println("  - Key unknown recived = " + key + kv.value().as<char*>());
       }
     }
-    
+
     if (state.equals(OFF_PAYLOAD)) {
       Switch_Off();
     }
@@ -325,7 +335,7 @@ void Connection_Manager() {
   WiFi.mode(WIFI_AP_STA);
 
   if (Ssid.Val != "" && !Ssid.Val.startsWith(" ")) {
-    if (getWifiPower(Ssid.Val)){
+    if (getWifiPower(Ssid.Val)) {
       WiFi.begin(Ssid.Val, Password.Val);
       Serial.println("Connecting to: " + String(Ssid.Val));
       byte numCehck = 0;
@@ -372,17 +382,17 @@ void Connection_Manager() {
     server.send(200, "text/html", webPage);
   });
   server.on("/on", []() {
-    server.sendHeader("Location","/");
+    server.sendHeader("Location", "/");
     server.send(303);
     Switch_On();
   });
   server.on("/off", []() {
-    server.sendHeader("Location","/");
+    server.sendHeader("Location", "/");
     server.send(303);
     Switch_Off();
   });
   server.on("/restart", []() {
-    server.sendHeader("Location","/");
+    server.sendHeader("Location", "/");
     server.send(303);
     Restart();
   });
@@ -471,22 +481,22 @@ void OtaUpdate() {
   Serial.println(url);
 
   t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, url, Version);
-  
+
   switch (ret)
   {
-  case HTTP_UPDATE_FAILED:
-    Serial.println("Update faild!");
-    Led.Blink(PLACING_TIME, 10, TIME_FLASH_BLINK);
-    break;
-  case HTTP_UPDATE_NO_UPDATES:
-    Serial.println("No new update available");
-    Led.Blink(PLACING_TIME, 3, TIME_FLASH_BLINK);
-    break;
-  case HTTP_UPDATE_OK:
-    Serial.println("Update OK");
-    Led.Blink(PLACING_TIME, 5, TIME_FLASH_BLINK);
-    break;
-  default:
-    break;
+    case HTTP_UPDATE_FAILED:
+      Serial.println("Update faild!");
+      Led.Blink(PLACING_TIME, 10, TIME_FLASH_BLINK);
+      break;
+    case HTTP_UPDATE_NO_UPDATES:
+      Serial.println("No new update available");
+      Led.Blink(PLACING_TIME, 3, TIME_FLASH_BLINK);
+      break;
+    case HTTP_UPDATE_OK:
+      Serial.println("Update OK");
+      Led.Blink(PLACING_TIME, 5, TIME_FLASH_BLINK);
+      break;
+    default:
+      break;
   }
 }
