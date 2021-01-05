@@ -189,7 +189,8 @@ void Switch_On() {
 void Switch_Off() {
   Rele.Off();
 
-  if (deviceConnected) {JsonObject msg = message.to<JsonObject>();    
+  if (deviceConnected) {
+    JsonObject msg = message.to<JsonObject>();    
     char msg_out[JSON_MSG_LENGTH];
     msg["state"] = OFF_PAYLOAD;
     serializeJson(msg, msg_out);
