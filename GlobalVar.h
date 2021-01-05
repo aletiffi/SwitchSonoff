@@ -22,8 +22,8 @@
 //----------------------------------------------------------------------------
 #define JSON_MSG_LENGTH           32
 //----------------------------------------------------------------------------
-#define ProductKey                "2aea9e14-07a7-4d73-8d83-1dc42cee5622"
-#define Version                   "29.0.0.0"
+#define ProductKey                "fce33026-9a4d-47c1-a8fd-d6ff4d4cc135"
+#define Version                   "31.1.0.0"
 #define MakeFirmwareInfo(k, v)    "&_FirmwareInfo&k=" k "&v=" v "&FirmwareInfo_&"
 //----------------------------------------------------------------------------
 bool pushButton                   = false;
@@ -39,6 +39,7 @@ unsigned long lastTimeCheckConn   = 0;
 unsigned long lastMqttCheckConn   = 0;
 //----------------------------------------------------------------------------
 String DefaultApName              = "Sonoff_AP";
+String mac                        = "";
 
 struct WifiSetup{
   String Name;

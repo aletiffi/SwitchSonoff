@@ -1,1 +1,1 @@
-Inserisce esempio di configurazione e note gpio
+Cambio API key ota drive
