@@ -3,12 +3,9 @@
         {
             "name": "Win32",
             "includePath": [
-                "C:\\Users\\Ale\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
-                "C:\\Users\\Ale\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.7.4\\**",
-                "C:\\Users\\Ale\\Documents\\Arduino\\libraries\\**",
-                "C:\\Program Files (x86)\\Arduino\\libraries\\**",
-                "C:\\Users\\Ale\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.7.4\\**",
-                "C:\\Users\\Ale\\Google Drive\\Progetti\\Arduino\\Progetti Arduino\\Casa Anna Ale\\Switch_Sonoff"
+                "C:\\Users\\aleti\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.7.4\\libraries\\**",
+                "C:\\Program Files (x86)\\Arduino\\**",
+                "C:\\Users\\aleti\\Documents\\Arduino\\libraries\\**"
             ],
             "forcedInclude": [],
             "intelliSenseMode": "msvc-x64",

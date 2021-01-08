@@ -24,10 +24,10 @@ DynamicJsonDocument message(JSON_MSG_LENGTH);
 
 void setup() {
   Serial.begin(115200);
-  delay(500);
-
   Rele.Begin();
   Led.Begin();
+  delay(500);
+  Led.Blink(T_100MS * 5, 1, T_100MS * 5);
 
   switchState = Switch.State();
   switchStatePre = switchState;
@@ -44,14 +44,17 @@ void loop() {
     if (client.connected()) {
       client.loop();
     } else {
-      if (millis() - lastMqttCheckConn > MQTT_CONNECTION) {
-        Serial.println("Mqtt client not connected");
+      if (millis() - lastMqttCheckConn > T_5S) {
+        Serial.print("Connecting Mqtt client... ");
         lastMqttCheckConn = millis();
-        // Attempt to reconnect
+        // Prova a riconnettere
         if (client.connect(Hostname.Val.c_str(), MqttUser.Val.c_str(), MqttPassword.Val.c_str())) {
           lastMqttCheckConn = 0;
           client.subscribe(MqttSubTopic.Val.c_str());
-          Serial.println("Mqtt client reconnected");
+          Serial.println("Ok");
+          (Rele.State() == OFF_RELAY) ? PublishSwitchState(OFF_PAYLOAD) : PublishSwitchState(ON_PAYLOAD);
+        } else {
+          Serial.println("Failed");          
         }
       }
     }
@@ -59,17 +62,17 @@ void loop() {
   server.handleClient();
 
   // Controllo connessione ed aggiornamenti ota
-  if (millis() - lastTimeCheckConn > TIMER_CONNECTION) {
+  if (millis() - lastTimeCheckConn > T_5MIN) {
     // Blink di check connessione
     Serial.print("Connection check... ");
     Led.Off();
-    delay(PLACING_TIME);
+    delay(T_200MS);
     lastTimeCheckConn = millis();
 
     if (WiFi.status() != WL_CONNECTED) {
       Connection_Manager();
     } else {
-      Serial.println("OK");
+      Serial.println("Ok");
       OtaUpdate();
       // Accendo led di conferma connessione alla rete
       Led.On();
@@ -81,7 +84,7 @@ void loop() {
 
   if (pushButton && !pushButtonPre) {
     Led.Off();
-    delay(PLACING_TIME);
+    delay(T_200MS);
     pushButtonTime = millis();
   }
   if (pushButtonPre && !pushButton) {
@@ -94,9 +97,9 @@ void loop() {
   pushButtonPre = pushButton;
 
   if (pushButton) {
-    if (millis() - pushButtonTime > (BLINK_TIME - TIME_FLASH_BLINK)) {
+    if (millis() - pushButtonTime > T_1S) {
       pushButtonTime = millis();
-      Led.Blink(PLACING_TIME, 1, TIME_FLASH_BLINK);
+      Led.Blink(T_200MS, 1, T_100MS);
       pushButtonCount ++;
     }
   }
@@ -159,7 +162,7 @@ void PushButtonFunction(int func) {
       break;
     default:
       Serial.println("No function!");
-      Led.Blink(PLACING_TIME, 5, TIME_FLASH_BLINK);
+      Led.Blink(T_200MS, 5, T_100MS);
       break;
   }
 }
@@ -167,38 +170,24 @@ void PushButtonFunction(int func) {
 void Restart() {
   Serial.println("Restart");
   delay(500);
-  Led.Blink(PLACING_TIME, 5, TIME_FLASH_BLINK);
+  Led.Blink(T_200MS, 5, T_100MS);
   ESP.restart();
 }
 
 void Switch_On() {
   Rele.On();
-
-  if (deviceConnected) {
-    JsonObject msg = message.to<JsonObject>();    
-    char msg_out[JSON_MSG_LENGTH];
-    msg["state"] = ON_PAYLOAD;
-    serializeJson(msg, msg_out);
-    client.publish(MqttPubTopic.Val.c_str(), msg_out);
-    Serial.print("Message published: ");
-    Serial.println(msg_out);
-  }
   Serial.println("Switched ON");
+  if (deviceConnected) {
+    PublishSwitchState(ON_PAYLOAD);
+  }
 }
 
 void Switch_Off() {
   Rele.Off();
-
-  if (deviceConnected) {
-    JsonObject msg = message.to<JsonObject>();    
-    char msg_out[JSON_MSG_LENGTH];
-    msg["state"] = OFF_PAYLOAD;
-    serializeJson(msg, msg_out);
-    client.publish(MqttPubTopic.Val.c_str(), msg_out);
-    Serial.print("Message published: ");
-    Serial.println(msg_out);
-  }
   Serial.println("Switched OFF");
+  if (deviceConnected) {
+    PublishSwitchState(OFF_PAYLOAD);
+  }
 }
 
 void Switch_Toggle() {
@@ -207,6 +196,19 @@ void Switch_Toggle() {
   } else {
     Switch_On();
   }
+}
+
+void PublishSwitchState(String state){
+    JsonObject msg = message.to<JsonObject>();    
+    char msg_out[JSON_MSG_LENGTH];
+    msg["state"] = state;
+    serializeJson(msg, msg_out);
+    if (client.publish(MqttPubTopic.Val.c_str(), msg_out)){
+      Serial.print("Message published: ");
+      Serial.println(msg_out);      
+    } else {
+      Serial.print("Message publishing error");
+    }  
 }
 
 void Callback(char *topic, byte *payload, unsigned int length) {
@@ -264,13 +266,11 @@ void ShowIpAddr() {
       }
     }
 
-    Led.Blink(PLACING_TIME, ipNum, PLACING_TIME);
+    Led.Blink(T_200MS, ipNum, T_200MS);
 
   } else {
-
-    Serial.println("Not connected!");
     // Lampeggio connessione fallita
-    Led.Blink(PLACING_TIME, 10, TIME_FLASH_BLINK);
+    Led.Blink(T_200MS, 10, T_100MS);
   }
 }
 
@@ -313,7 +313,7 @@ bool getWifiPower(String netName) {
               Serial.println(" Very High!");
               break;
           }
-          Led.Blink(PLACING_TIME, power, PLACING_TIME);
+          Led.Blink(T_200MS, power, T_200MS);
         } else {
           Serial.println(" Signal level out of bounds");
         }
@@ -327,7 +327,7 @@ void Connection_Manager() {
   Serial.println("Connection process started");
   WiFi.softAPdisconnect(true);
   WiFi.disconnect();
-  delay(PLACING_TIME);
+  delay(T_200MS);
   LoadSettingsFromEeprom();
 
   WiFi.mode(WIFI_AP_STA);
@@ -350,19 +350,17 @@ void Connection_Manager() {
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("Connected!");
-    if (mac.equals("")) {
+    if (Mac.equals("")) {
       String macTemp = String(WiFi.macAddress());
       for (byte i=0; i<macTemp.length(); i++){
         if (macTemp.charAt(i) != ':'){
-          mac += macTemp.charAt(i);
+          Mac += macTemp.charAt(i);
         }
       }
     }
     Serial.println("IP: " + WiFi.localIP().toString() + " Mac: " + String(WiFi.macAddress()));
     client.setServer(MqttServer.Val.c_str(), 1883);
     client.setCallback(Callback);
-    client.connect(Hostname.Val.c_str(), MqttUser.Val.c_str(), MqttPassword.Val.c_str());
-    client.subscribe(MqttSubTopic.Val.c_str());
 
     // Accendo led per indicare l'avvenuta connessione
     Led.On();
@@ -371,7 +369,7 @@ void Connection_Manager() {
   } else {
     Serial.println("Not connected!");
     // Lampeggio connessione fallita
-    Led.Blink(PLACING_TIME, 10, TIME_FLASH_BLINK);
+    Led.Blink(T_200MS, 10, T_100MS);
     // Lascio spento il led per indicare l'assenza di connessione
     Led.Off();
     deviceConnected = false;
@@ -435,7 +433,7 @@ void ChangeSettings() {
 
   Serial.println("Parameters recived:");
   Serial.println(data);
-  Led.Blink(PLACING_TIME, 3, PLACING_TIME);
+  Led.Blink(T_200MS, 3, T_200MS);
   for (int i = 0; i < data.length(); i++) {
     if (data.charAt(i) == '"') {
       if (startPoint == -1) {
@@ -481,7 +479,7 @@ void LoadSettingsFromEeprom() {
 
 void OtaUpdate() {
   String url = "http://otadrive.com/DeviceApi/GetEsp8266Update?";
-  url += "&s=" + mac;
+  url += "&s=" + Mac;
   url += MakeFirmwareInfo(ProductKey, Version);
 
   Serial.println("Get firmware from url:");

@@ -1,1 +1,1 @@
-Cambio API key ota drive
+Funzionamento corretto senza flag di retain lato hassio

@@ -6,11 +6,11 @@
 #define OFF_RELAY                 LOW
 #define OFF_LED                   HIGH
 //----------------------------------------------------------------------------
-#define BLINK_TIME                1000        // Delay cambio programma
-#define TIME_FLASH_BLINK          100
-#define PLACING_TIME              200
-#define TIMER_CONNECTION          300000      // Controllo connessione ogni 5 min
-#define MQTT_CONNECTION           5000
+#define T_100MS                   100
+#define T_200MS                   200
+#define T_1S                      1000
+#define T_5S                      5000
+#define T_5MIN                    300000      // Per controllo connessione
 //----------------------------------------------------------------------------
 #define EEPROM_SIZE               256
 //----------------------------------------------------------------------------
@@ -23,7 +23,7 @@
 #define JSON_MSG_LENGTH           32
 //----------------------------------------------------------------------------
 #define ProductKey                "fce33026-9a4d-47c1-a8fd-d6ff4d4cc135"
-#define Version                   "31.1.0.0"
+#define Version                   "35.1.0.0"
 #define MakeFirmwareInfo(k, v)    "&_FirmwareInfo&k=" k "&v=" v "&FirmwareInfo_&"
 //----------------------------------------------------------------------------
 bool pushButton                   = false;
@@ -39,7 +39,7 @@ unsigned long lastTimeCheckConn   = 0;
 unsigned long lastMqttCheckConn   = 0;
 //----------------------------------------------------------------------------
 String DefaultApName              = "Sonoff_AP";
-String mac                        = "";
+String Mac                        = "";
 
 struct WifiSetup{
   String Name;

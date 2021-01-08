@@ -49,42 +49,42 @@ const char webPage[] PROGMEM = R"=====(
         <a href="/restart"><button style="color:black; background-color: rgb(170, 20, 216);">Restart</button></a>
       </p>
       <hr>
-      <h2> Settings</h2>
+      <h2>Settings</h2>
       <p>
         <label for="Hostname">Hostname</label>
       </p>
       <p>
-        <input value="" id="Hostname" placeholder="Hostname">
+        <input value="" id="Hostname" placeholder="DeviceName">
       </p>
       <p>  
         <label for="Ssid">Ssid</label>
       </p>
       <p>
-        <input value="" id="Ssid" placeholder="Ssid">
+        <input value="" id="Ssid" placeholder="Wifi Net to connect">
       </p>
       <p>
         <label for="Password">Password</label>
       </p>
       <p>
-        <input type="password" value="" id="Password" placeholder="Password">
+        <input type="password" value="" id="Password" placeholder="Wifi Password">
       </p>
       <p>  
-        <label for="MQTT_Sub">MQTT Sub</label>
+        <label for="MQTT_Sub">MQTT Subscribe topic</label>
       </p>
       <p>
-        <input value="" id="MQTT_Sub" placeholder="MQTT Sub">
+        <input value="" id="MQTT_Sub" placeholder="cmnd/MyDevice">
+      </p>
+      <p>  
+        <label for="MQTT_Pub">MQTT Publish topic</label>
       </p>
       <p>
-        <label for="MQTT_Pub">MQTT Pub</label>
-      </p>
-      <p>
-        <input value="" id="MQTT_Pub" placeholder="MQTT Pub">
+        <input value="" id="MQTT_Pub" placeholder="stat/MyDevice">
       </p>
       <p>  
         <label for="MQTT_Server">MQTT Server</label>
       </p>
       <p>
-        <input value="" id="MQTT_Server" placeholder="MQTT Server">
+        <input value="" id="MQTT_Server" placeholder="192.168.1.100">
       </p>
       <p>
         <label for="MQTT_User">MQTT User</label>
