@@ -1,1 +1,1 @@
-Funzionamento corretto senza flag di retain lato hassio
+Ricompilato con libreria StoreStrings alla versione 4

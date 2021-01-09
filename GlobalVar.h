@@ -13,6 +13,7 @@
 #define T_5MIN                    300000      // Per controllo connessione
 //----------------------------------------------------------------------------
 #define EEPROM_SIZE               256
+#define SWITCH_STATE_SIZE         6
 //----------------------------------------------------------------------------
 #define NUM_WIFI_SETTINGS         8
 #define MAX_LENGTH_SETTING        16
@@ -23,7 +24,7 @@
 #define JSON_MSG_LENGTH           32
 //----------------------------------------------------------------------------
 #define ProductKey                "fce33026-9a4d-47c1-a8fd-d6ff4d4cc135"
-#define Version                   "35.1.0.0"
+#define Version                   "37.1.0.0"
 #define MakeFirmwareInfo(k, v)    "&_FirmwareInfo&k=" k "&v=" v "&FirmwareInfo_&"
 //----------------------------------------------------------------------------
 bool pushButton                   = false;

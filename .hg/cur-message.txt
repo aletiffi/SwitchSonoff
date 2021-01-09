@@ -1,1 +1,0 @@
-Corregge id in homepage. Invio dei messaggi mqtt ritentivi, sembra che hassio non li gestisca.

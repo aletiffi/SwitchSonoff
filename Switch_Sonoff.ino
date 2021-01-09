@@ -19,7 +19,7 @@ ReadInput Button(SONOFF_BUTTON);
 ReadInput Switch(SONOFF_SWITCH);
 DigiOut Led(SONOFF_LED, OFF_LED);
 DigiOut Rele(SONOFF_RELAY, OFF_RELAY);
-StoreStrings mem(EEPROM_SIZE);
+StoreStrings mem(EEPROM_SIZE - SWITCH_STATE_SIZE, SWITCH_STATE_SIZE);
 DynamicJsonDocument message(JSON_MSG_LENGTH);
 
 void setup() {
@@ -36,6 +36,8 @@ void setup() {
 
   Serial.println("\n----------------------");
   Serial.println("Application ver. " + String(Version) + " running!");
+  Serial.print("Last switch state: " + mem.read_pt2(mem.getStartAddr2()) + " --> ");
+  (mem.read_pt2(mem.getStartAddr2()) == ON_PAYLOAD) ? Switch_On() : Switch_Off();
   Connection_Manager();
 }
 
@@ -176,6 +178,7 @@ void Restart() {
 
 void Switch_On() {
   Rele.On();
+  mem.write_pt2(mem.getStartAddr2(), ON_PAYLOAD);
   Serial.println("Switched ON");
   if (deviceConnected) {
     PublishSwitchState(ON_PAYLOAD);
@@ -184,6 +187,7 @@ void Switch_On() {
 
 void Switch_Off() {
   Rele.Off();
+  mem.write_pt2(mem.getStartAddr2(), OFF_PAYLOAD);
   Serial.println("Switched OFF");
   if (deviceConnected) {
     PublishSwitchState(OFF_PAYLOAD);
@@ -471,7 +475,7 @@ void LoadSettingsFromEeprom() {
   Serial.println("Loading settings from EEPROM");
   mem.resetReadCounter();
   for (byte i = 0; i < NUM_WIFI_SETTINGS; i++) {
-    WifiSettings[i]->Val = mem.read(mem.getLastReadedByte(), MAX_LENGTH_SETTING);
+    WifiSettings[i]->Val = mem.read(mem.getLastReadedByte());
     Serial.println( WifiSettings[i]->Name + ": " +  WifiSettings[i]->Val);
   }
   Serial.println("Settings loaded!");
