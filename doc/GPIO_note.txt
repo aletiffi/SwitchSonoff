@@ -1,7 +1,3 @@
-/*
-GPIO03 and GPIO02 are pulled high momentarily after boot. 
-Any connected device may "blink" when the Sonoff is powering up.
-
 Sonoff r1
     GPIO00 - BUTTON
     GPIO12 - RELAY
@@ -26,5 +22,4 @@ Sonoff r3 (ESP8285)
     GPIO01 - TX PIN
     GPIO09
     GPIO10
-    GPIO16  
-*/
+    GPIO16

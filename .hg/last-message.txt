@@ -1,1 +1,0 @@
-Ricompilato con libreria StoreStrings alla versione 4
