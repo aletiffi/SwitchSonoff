@@ -3,7 +3,7 @@
 By installing this firmware you can control a Sonoff as a relay both from the wall switch and from your smartphone. This Sonoff can communicate via MQTT protocol with a broker like mosquitto, and in stand-alone mode by accessing the device homepage. Once connected to your wifi network it will be accessible in localhost or at 192.168.4.1 by connecting to its wifi network.
 
 <p align="center">
-  <img src="https://github.com/aletiffi/Led_Sonoff/blob/main/img/HomePage.PNG" alt="Settings"/>
+  <img src="https://github.com/aletiffi/Switch_Sonoff/blob/main/img/HomePage.PNG" alt="Settings"/>
 </p>
 
 **Wirings**
@@ -11,7 +11,7 @@ By installing this firmware you can control a Sonoff as a relay both from the wa
 In this project a Sonoff r1 and a wall switch are used to power a light bulb or a wall socket.
 
 <p align="center">
-  <img src="https://github.com/aletiffi/Led_Sonoff/blob/main/img/Schema.png" alt="Settings"/>
+  <img src="https://github.com/aletiffi/Switch_Sonoff/blob/main/img/Schema.png" alt="Settings"/>
 </p>
 
 **Setup**
@@ -21,7 +21,7 @@ Once the firmware has been loaded, the EEPROM is deleted at the first start, and
 Once connected to the wifi network named **SonoffSwitch** (default name) open the browser at 192.168.4.1. Rename the device then enter the name of the wifi network and the password to which it must connect. The other settings can be entered later. By pressing the `Save Settings` button at the bottom of the page the Sonoff restarts, then tries to connect to your network.
 
 <p align="center">
-  <img src="https://github.com/aletiffi/Led_Sonoff/blob/main/img/Settings.PNG" alt="Settings"/>
+  <img src="https://github.com/aletiffi/Switch_Sonoff/blob/main/img/Settings.PNG" alt="Settings"/>
 </p>
 
 The integrated led indicates successful connection to the wifi network.
