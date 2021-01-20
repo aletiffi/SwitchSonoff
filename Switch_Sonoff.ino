@@ -19,14 +19,18 @@ ReadInput Button(SONOFF_BUTTON);
 ReadInput Switch(SONOFF_SWITCH);
 DigiOut Led(SONOFF_LED, OFF_LED);
 DigiOut Rele(SONOFF_RELAY, OFF_RELAY);
-StoreStrings mem(EEPROM_SIZE - SWITCH_STATE_SIZE, SWITCH_STATE_SIZE);
-DynamicJsonDocument message(JSON_MSG_LENGTH);
+StoreStrings mem(SETTIGNS_EEPROM_SIZE, STATE_EEPROM_SIZE);
 
 void setup() {
   Serial.begin(115200);
+  delay(T_250MS);
+
+  if (!mem.isReady()) {
+    mem.clear();
+  }
+  
   Rele.Begin();
   Led.Begin();
-  delay(500);
   Led.Blink(T_100MS * 5, 1, T_100MS * 5);
 
   switchState = Switch.State();
@@ -36,36 +40,40 @@ void setup() {
 
   Serial.println("\n----------------------");
   Serial.println("Application ver. " + String(Version) + " running!");
-  Serial.print("Last switch state: " + mem.read_pt2(mem.getStartAddr2()) + " --> ");
-  (mem.read_pt2(mem.getStartAddr2()) == ON_PAYLOAD) ? Switch_On() : Switch_Off();
+  LoadStateFromEeprom();
+  if (SwitchState.Val == 1) {
+    Rele.On();
+  } else {
+    Rele.Off();
+  }
   Connection_Manager();
 }
 
 void loop() {
-  if (deviceConnected) {
+  if (deviceConnected && mqttConfigured) {
     if (client.connected()) {
       client.loop();
     } else {
       if (millis() - lastMqttCheckConn > T_5S) {
         Serial.print("Connecting Mqtt client... ");
         lastMqttCheckConn = millis();
-        // Prova a riconnettere
+        // Try to reconnect
         if (client.connect(Hostname.Val.c_str(), MqttUser.Val.c_str(), MqttPassword.Val.c_str())) {
           lastMqttCheckConn = 0;
           client.subscribe(MqttSubTopic.Val.c_str());
           Serial.println("Ok");
-          (Rele.State() == OFF_RELAY) ? PublishSwitchState(OFF_PAYLOAD) : PublishSwitchState(ON_PAYLOAD);
+          PublishState();
         } else {
-          Serial.println("Failed");          
+          Serial.println("Failed");
         }
       }
     }
   }
   server.handleClient();
+  mdns.update();
 
-  // Controllo connessione ed aggiornamenti ota
-  if (millis() - lastTimeCheckConn > T_5MIN) {
-    // Blink di check connessione
+  // Connection check
+  if (wifiConfigured && millis() - lastTimeCheckConn > T_5MIN) {
     Serial.print("Connection check... ");
     Led.Off();
     delay(T_200MS);
@@ -74,14 +82,14 @@ void loop() {
     if (WiFi.status() != WL_CONNECTED) {
       Connection_Manager();
     } else {
-      Serial.println("Ok");
+      Serial.println("OK");
       OtaUpdate();
-      // Accendo led di conferma connessione alla rete
+      // Turns on the LED for network connection confirmation
       Led.On();
     }
   }
 
-  // Controllo presione pulsante multifunzione
+  // Multifunction button pressure control
   pushButton = !Button.State();
 
   if (pushButton && !pushButtonPre) {
@@ -92,21 +100,21 @@ void loop() {
   if (pushButtonPre && !pushButton) {
     PushButtonFunction(pushButtonCount);
     pushButtonCount = 0;
-    if (WiFi.status() == WL_CONNECTED) {
+    if (deviceConnected) {
       Led.On();
     }
   }
   pushButtonPre = pushButton;
 
   if (pushButton) {
-    if (millis() - pushButtonTime > T_1S) {
+    if (millis() - pushButtonTime > (T_1S - T_100MS)) {
       pushButtonTime = millis();
       Led.Blink(T_200MS, 1, T_100MS);
       pushButtonCount ++;
     }
   }
 
-  // Controllo stato switch
+  // Switch state check
   switchState = Switch.State();
 
   if (switchStatePre == false && switchState == true) {
@@ -123,12 +131,12 @@ void PushButtonFunction(int func) {
   switch (func) {
     case 1:
       Serial.println("Toggle");
-      delay(500);
+      delay(T_250MS);
       Switch_Toggle();
       break;
     case 2:
       Serial.println("Connection check");
-      delay(500);
+      delay(T_250MS);
       Connection_Manager();
       break;
     case 3:
@@ -140,25 +148,26 @@ void PushButtonFunction(int func) {
       ShowIpAddr();
       break;
     case 5:
-      Serial.println("Load settings");
-      LoadSettingsFromEeprom();
-      break;
-    case 6:
-      Serial.println("Save settings");
-      SaveSettingsInEeprom();
-      break;
-    case 7:
-      Serial.println("EEPROM clean");
-      for (int i = 0; i < EEPROM_SIZE; i++) {
-        mem.write(i, String('\0'));
-      }
-      Restart();
-      break;
-    case 8:
       Serial.println("Wifi signal power");
       getWifiPower(Ssid.Val);
       break;
+    case 6:
+      Serial.println("Load settings");
+      LoadSettingsFromEeprom();
+      break;
+    case 7:
+      Serial.println("Save settings");
+      SaveSettingsInEeprom();
+      break;
+    case 8:
+      Serial.println("EEPROM clean");
+      CleanEEPROM();
+      break;
     case 9:
+      Serial.println("Read all EEPROM");
+      mem.print_all();
+      break;
+    case 10:
       Serial.println("Sonoff restart");
       Restart();
       break;
@@ -171,27 +180,29 @@ void PushButtonFunction(int func) {
 
 void Restart() {
   Serial.println("Restart");
-  delay(500);
+  delay(T_250MS);
   Led.Blink(T_200MS, 5, T_100MS);
   ESP.restart();
 }
 
 void Switch_On() {
   Rele.On();
-  mem.write_pt2(mem.getStartAddr2(), ON_PAYLOAD);
-  Serial.println("Switched ON");
+  SwitchState.Val = 1;
+
   if (deviceConnected) {
-    PublishSwitchState(ON_PAYLOAD);
+    PublishState();
   }
+  SaveStateInEeprom();
 }
 
 void Switch_Off() {
   Rele.Off();
-  mem.write_pt2(mem.getStartAddr2(), OFF_PAYLOAD);
-  Serial.println("Switched OFF");
+  SwitchState.Val = 0;
+
   if (deviceConnected) {
-    PublishSwitchState(OFF_PAYLOAD);
+    PublishState();
   }
+  SaveStateInEeprom();
 }
 
 void Switch_Toggle() {
@@ -202,20 +213,26 @@ void Switch_Toggle() {
   }
 }
 
-void PublishSwitchState(String state){
-    JsonObject msg = message.to<JsonObject>();    
-    char msg_out[JSON_MSG_LENGTH];
-    msg["state"] = state;
-    serializeJson(msg, msg_out);
-    if (client.publish(MqttPubTopic.Val.c_str(), msg_out)){
-      Serial.print("Message published: ");
-      Serial.println(msg_out);      
-    } else {
-      Serial.print("Message publishing error");
-    }  
+void PublishState(){
+  DynamicJsonDocument doc(JSON_MSG_LENGTH);
+  char msg_out[JSON_MSG_LENGTH];
+
+  if (Rele.State() == OFF_RELAY) {
+    doc["state"] = OFF_PAYLOAD;
+  } else {
+    doc["state"] = ON_PAYLOAD;
+  }
+  serializeJson(doc, msg_out);
+  if (client.publish(MqttPubTopic.Val.c_str(), msg_out)) {
+    Serial.print("Message published: ");
+    Serial.println(msg_out);
+  } else {
+    Serial.println("Message publishing error");
+  }
 }
 
 void Callback(char *topic, byte *payload, unsigned int length) {
+  DynamicJsonDocument doc(JSON_MSG_LENGTH);
   Serial.print("Payload recived: ");
   for (byte i = 0; i < length; i++) {
     Serial.print(char(payload[i]));
@@ -226,14 +243,14 @@ void Callback(char *topic, byte *payload, unsigned int length) {
     const char* stat;
     String state;
     Serial.println("Command/s on payload: ");
-    deserializeJson(message, payload);
-    JsonObject root = message.as<JsonObject>();
+    deserializeJson(doc, payload, length);
+    JsonObject root = doc.as<JsonObject>();
 
     for (JsonPair kv : root) {
       String key = kv.key().c_str();
 
       if (key.equals("state")) {
-        stat = message["state"];
+        stat = doc["state"];
         state = String(stat);
         Serial.println("  - state = " + state);
 
@@ -273,7 +290,9 @@ void ShowIpAddr() {
     Led.Blink(T_200MS, ipNum, T_200MS);
 
   } else {
-    // Lampeggio connessione fallita
+
+    Serial.println("Not connected!");
+    // Connection failed
     Led.Blink(T_200MS, 10, T_100MS);
   }
 }
@@ -336,7 +355,7 @@ void Connection_Manager() {
 
   WiFi.mode(WIFI_AP_STA);
 
-  if (Ssid.Val != "" && !Ssid.Val.startsWith(" ")) {
+  if (Ssid.Val != NULL_CHAR && Password.Val != NULL_CHAR) {
     if (getWifiPower(Ssid.Val)) {
       WiFi.begin(Ssid.Val, Password.Val);
       Serial.println("Connecting to: " + String(Ssid.Val));
@@ -347,18 +366,18 @@ void Connection_Manager() {
           break;
         }
         numCehck++;
-        delay(200);
+        delay(T_200MS);
       }
     }
   }
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("Connected!");
-    if (Mac.equals("")) {
+    if (mac.equals("")) {
       String macTemp = String(WiFi.macAddress());
-      for (byte i=0; i<macTemp.length(); i++){
-        if (macTemp.charAt(i) != ':'){
-          Mac += macTemp.charAt(i);
+      for (byte i = 0; i < macTemp.length(); i++) {
+        if (macTemp.charAt(i) != ':') {
+          mac += macTemp.charAt(i);
         }
       }
     }
@@ -366,27 +385,28 @@ void Connection_Manager() {
     client.setServer(MqttServer.Val.c_str(), 1883);
     client.setCallback(Callback);
 
-    // Accendo led per indicare l'avvenuta connessione
+    // Successful connection
     Led.On();
     deviceConnected = true;
 
   } else {
     Serial.println("Not connected!");
-    // Lampeggio connessione fallita
+    // Connection failed
     Led.Blink(T_200MS, 10, T_100MS);
-    // Lascio spento il led per indicare l'assenza di connessione
+    // Keeps the led off
     Led.Off();
     deviceConnected = false;
   }
 
-  // Configurazione AP e webServer
+  // WebServer configuration
   if (Hostname.Val == "" || Hostname.Val.startsWith(" ") || Hostname.Val.length() >= MAX_LENGTH_SETTING) {
-    Hostname.Val = DefaultApName;
+    Hostname.Val = DEFAULT_AP_NAME;
   }
   Serial.println("AP Name: " + Hostname.Val);
 
   WiFi.softAP(Hostname.Val.c_str());
   mdns.begin(Hostname.Val, WiFi.localIP());
+  mdns.addService("http", "tcp", 80);
   server.on("/", []() {
     server.send(200, "text/html", webPage);
   });
@@ -406,10 +426,11 @@ void Connection_Manager() {
     Restart();
   });
   server.on("/settings", HTTP_POST, ChangeSettings);
+  server.on("/clean", HTTP_GET, CleanEEPROM);
   server.onNotFound(handleNotFound);
   server.begin();
 
-  // Azzero ultimo tempo di connessione
+  // Reset last connection time
   lastTimeCheckConn = millis();
 }
 
@@ -428,63 +449,93 @@ void handleNotFound() {
   server.send(404, "text/plain", message);
 }
 
-void ChangeSettings() {
-  int numIteration = 0;
-  int startPoint = -1;
-  int parNum = 0;
-  String valRecived;
-  String data = server.arg("plain");
+void CleanEEPROM() {
+  Led.Blink(T_200MS, 3, T_200MS);
+  mem.clear();
+  mem.print_all();
+  Led.Blink(T_200MS, 3, T_200MS);
+  Restart();
+}
 
+void ChangeSettings() {
+  DynamicJsonDocument doc(512);
+  String data = server.arg("plain");
   Serial.println("Parameters recived:");
   Serial.println(data);
-  Led.Blink(T_200MS, 3, T_200MS);
-  for (int i = 0; i < data.length(); i++) {
-    if (data.charAt(i) == '"') {
-      if (startPoint == -1) {
-        startPoint = i;
-      } else {
-        valRecived = data.substring(startPoint + 1, i);
-        startPoint = -1;
-        numIteration++;
-        if (numIteration % 2 == 0) {
-          Serial.println(valRecived);
-          if (valRecived != " " && valRecived != "" && !valRecived.startsWith(" ")) {
-            WifiSettings[parNum]->Val = valRecived;
-          }
-          parNum++;
-        } else {
-          Serial.print(valRecived + ": ");
+  deserializeJson(doc, data);
+  JsonObject root = doc.as<JsonObject>();
+  for (JsonPair kv : root) {
+    String key = kv.key().c_str();
+    for (byte i = 0; i < NUM_WIFI_SETTINGS; i++) {
+      if (key.equals(WifiSettings[i]->Name)) {
+        String temp = doc[key];
+        if (temp != " " && temp != "" && !temp.startsWith(" ")) {
+          WifiSettings[i]->Val = temp;
         }
       }
     }
   }
+
   SaveSettingsInEeprom();
   Connection_Manager();
 }
 
 void SaveSettingsInEeprom() {
-  Serial.println("Saving settings in EEPROM");
   mem.resetWriteCounter();
   for (byte i = 0; i < NUM_WIFI_SETTINGS; i++) {
     mem.write(mem.getLastWrittenByte(), WifiSettings[i]->Val);
   }
-  Serial.println("Settings saved!");
 }
 
 void LoadSettingsFromEeprom() {
-  Serial.println("Loading settings from EEPROM");
+  Serial.println("Loading settings from EEPROM... ");
   mem.resetReadCounter();
   for (byte i = 0; i < NUM_WIFI_SETTINGS; i++) {
     WifiSettings[i]->Val = mem.read(mem.getLastReadedByte());
     Serial.println( WifiSettings[i]->Name + ": " +  WifiSettings[i]->Val);
   }
-  Serial.println("Settings loaded!");
+
+  if ( MqttSubTopic.Val != NULL_CHAR && MqttPubTopic.Val != NULL_CHAR && MqttServer.Val != NULL_CHAR &&
+       MqttUser.Val != NULL_CHAR && MqttPassword.Val != NULL_CHAR) {
+    mqttConfigured = true;
+  } else {
+    mqttConfigured = false;
+  }
+
+  if (Ssid.Val != NULL_CHAR && Password.Val != NULL_CHAR) {
+    wifiConfigured = true;
+  } else {
+    wifiConfigured = false;
+  }
+}
+
+void SaveStateInEeprom() {
+  mem.resetWriteCounter2();
+  for (byte i = 0; i < NUM_STATE_SETTINGS; i++) {
+    mem.write_pt2(mem.getLastWrittenByte2(), String(StateSettings[i]->Val));
+  }
+}
+
+void LoadStateFromEeprom() {
+  Serial.println("Loading last state from EEPROM");
+  mem.resetReadCounter2();
+  for (byte i = 0; i < NUM_STATE_SETTINGS; i++) {
+    StateSettings[i]->Val = mem.read_pt2(mem.getLastReadedByte2()).toInt();
+    Serial.print( StateSettings[i]->Name + ": " +  StateSettings[i]->Val + " ");
+  }
+  Serial.println("");
 }
 
 void OtaUpdate() {
+  //----------------------------------------------------------------------------
+  //---To be able to change product key-----------------------------------------
+  String fake_url = "http://otadrive.com/DeviceApi/GetEsp8266Update?";
+  fake_url += "&s=" + mac;
+  fake_url += MakeFirmwareInfo(ProductKey, Version);
+  //----------------------------------------------------------------------------
+
   String url = "http://otadrive.com/DeviceApi/GetEsp8266Update?";
-  url += "&s=" + Mac;
-  url += MakeFirmwareInfo(ProductKey, Version);
+  url += "&s=" + mac + "&_FirmwareInfo&k=" + OtaDriveProductKey.Val + "&v=" + Version + "&FirmwareInfo_&";
 
   Serial.println("Get firmware from url:");
   Serial.println(url);
@@ -492,17 +543,17 @@ void OtaUpdate() {
   t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, url, Version);
   switch (ret)
   {
-  case HTTP_UPDATE_FAILED:
-    Serial.printf("Update Faild, Error: (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-    break;
-  case HTTP_UPDATE_NO_UPDATES:
-    Serial.println("No new update available");
-    break;
-  case HTTP_UPDATE_OK:
-    Serial.println("Update OK");
-    break;
-  default:
-    Serial.println(ret);
-    break;
+    case HTTP_UPDATE_FAILED:
+      Serial.printf("Update Faild, Error: (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+      break;
+    case HTTP_UPDATE_NO_UPDATES:
+      Serial.println("No new update available");
+      break;
+    case HTTP_UPDATE_OK:
+      Serial.println("Update OK");
+      break;
+    default:
+      Serial.println(ret);
+      break;
   }
 }

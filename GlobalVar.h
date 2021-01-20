@@ -8,23 +8,30 @@
 //----------------------------------------------------------------------------
 #define T_100MS                   100
 #define T_200MS                   200
-#define T_1S                      1000
+#define T_250MS                   250
+#define T_1S                      1000        // Delay change function
 #define T_5S                      5000
-#define T_5MIN                    300000      // Per controllo connessione
+#define T_5MIN                    300000      // Connection check every 5 min
 //----------------------------------------------------------------------------
-#define EEPROM_SIZE               256
-#define SWITCH_STATE_SIZE         6
+#define SETTIGNS_EEPROM_SIZE      230
+#define STATE_EEPROM_SIZE         26
 //----------------------------------------------------------------------------
-#define NUM_WIFI_SETTINGS         8
-#define MAX_LENGTH_SETTING        16
+#define NUM_WIFI_SETTINGS         9
+#define NUM_STATE_SETTINGS        1
+#define MAX_LENGTH_SETTING        20
 //----------------------------------------------------------------------------
 #define ON_PAYLOAD                "ON"
 #define OFF_PAYLOAD               "OFF"
 //----------------------------------------------------------------------------
-#define JSON_MSG_LENGTH           32
+#define JSON_MSG_LENGTH           128
 //----------------------------------------------------------------------------
-#define ProductKey                "fce33026-9a4d-47c1-a8fd-d6ff4d4cc135"
-#define Version                   "37.1.0.0"
+#define NULL_CHAR                 '\0'
+#define DEFAULT_AP_NAME           "SonoffSwitch"
+//----------------------------------------------------------------------------
+#define Version                   "40.1.0.0"
+//----------------------------------------------------------------------------
+//---To be able to change product key-----------------------------------------
+#define ProductKey                "abc12345-1a1a-12a1-a1ab-a1ab1a1ab123"
 #define MakeFirmwareInfo(k, v)    "&_FirmwareInfo&k=" k "&v=" v "&FirmwareInfo_&"
 //----------------------------------------------------------------------------
 bool pushButton                   = false;
@@ -32,6 +39,8 @@ bool pushButtonPre                = false;
 bool switchState                  = false;
 bool switchStatePre               = false;
 bool deviceConnected              = false;
+bool wifiConfigured               = false;
+bool mqttConfigured               = false;
 //----------------------------------------------------------------------------
 int pushButtonCount               = 0;
 //----------------------------------------------------------------------------
@@ -39,9 +48,8 @@ unsigned long pushButtonTime      = 0;
 unsigned long lastTimeCheckConn   = 0;
 unsigned long lastMqttCheckConn   = 0;
 //----------------------------------------------------------------------------
-String DefaultApName              = "Sonoff_AP";
-String Mac                        = "";
-
+String mac                        = "";
+//----------------------------------------------------------------------------
 struct WifiSetup{
   String Name;
   String Val;
@@ -50,12 +58,13 @@ struct WifiSetup{
 WifiSetup Hostname                = {"Hostname", ""};
 WifiSetup Ssid                    = {"Ssid", ""};
 WifiSetup Password                = {"Password", ""};
-WifiSetup MqttSubTopic            = {"MqttSubTopic", ""};
-WifiSetup MqttPubTopic            = {"MqttPubTopic", ""};
-WifiSetup MqttServer              = {"MqttServer", ""};
-WifiSetup MqttUser                = {"MqttUser", ""};
-WifiSetup MqttPassword            = {"MqttPassword", ""};
-
+WifiSetup MqttSubTopic            = {"MQTT_Sub", ""};
+WifiSetup MqttPubTopic            = {"MQTT_Pub", ""};
+WifiSetup MqttServer              = {"MQTT_Server", ""};
+WifiSetup MqttUser                = {"MQTT_User", ""};
+WifiSetup MqttPassword            = {"MQTT_Password", ""};
+WifiSetup OtaDriveProductKey      = {"OTA_DRIVE_KEY", ""};
+  
 WifiSetup* WifiSettings[NUM_WIFI_SETTINGS] = {
   &Hostname, 
   &Ssid, 
@@ -64,4 +73,16 @@ WifiSetup* WifiSettings[NUM_WIFI_SETTINGS] = {
   &MqttPubTopic,
   &MqttServer, 
   &MqttUser, 
-  &MqttPassword};
+  &MqttPassword,
+  &OtaDriveProductKey};
+//----------------------------------------------------------------------------
+struct Setting{
+  String Name;
+  byte Val;
+};
+
+Setting SwitchState               = {"SwitchState", 0};
+
+Setting* StateSettings[NUM_STATE_SETTINGS] = {
+  &SwitchState
+  };
