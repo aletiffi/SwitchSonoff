@@ -84,6 +84,7 @@ void loop() {
     } else {
       Serial.println("OK");
       OtaUpdate();
+      PublishState();
       // Turns on the LED for network connection confirmation
       Led.On();
     }
