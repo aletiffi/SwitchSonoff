@@ -1,3 +1,16 @@
+//#define ENABLE_PRINT 
+#ifdef ENABLE_PRINT
+#define Sbegin(a)                 (Serial.begin(a))
+#define Sprint(a)                 (Serial.print(a))
+#define Sprintln(a)               (Serial.println(a))
+#define Sprintf(a, b, c)          (Serial.printf(a , b, c))
+#else
+#define Sbegin(a)
+#define Sprint(a)
+#define Sprintln(a)
+#define Sprintf(a, b, c)
+#endif
+//----------------------------------------------------------------------------
 #define SONOFF_BUTTON             0
 #define SONOFF_RELAY              12
 #define SONOFF_LED                13
@@ -28,11 +41,11 @@
 #define NULL_CHAR                 '\0'
 #define DEFAULT_AP_NAME           "SonoffSwitch"
 //----------------------------------------------------------------------------
-#define Version                   "41.1.0.0"
+#define FW_VERSION                "42.1.1.0"
 //----------------------------------------------------------------------------
 //---To be able to change product key-----------------------------------------
-#define ProductKey                "abc12345-1a1a-12a1-a1ab-a1ab1a1ab123"
-#define MakeFirmwareInfo(k, v)    "&_FirmwareInfo&k=" k "&v=" v "&FirmwareInfo_&"
+#define FAKE_API_KEY              "abc12345-1a1a-12a1-a1ab-a1ab1a1ab123"
+#define FW_URL_MKR(k, v)          "&_FirmwareInfo&k=" k "&v=" v "&FirmwareInfo_&"
 //----------------------------------------------------------------------------
 bool pushButton                   = false;
 bool pushButtonPre                = false;
